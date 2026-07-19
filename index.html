@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fiado Fácil</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fiado Fácil">
+
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+<link rel="shortcut icon" href="favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<style>
+  * { box-sizing: border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent; }
+  html, body { height:100%; overflow:hidden; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: #0f1115;
+    color: #eef0f3;
+    display:flex; flex-direction:column;
+  }
+  #app { flex:1; display:flex; flex-direction:column; min-height:0; }
+
+  header.topbar {
+    padding: 16px 18px 12px;
+    background: #14171d;
+    border-bottom: 1px solid #232733;
+  }
+  header.topbar h1 { font-size: 19px; font-weight:700; letter-spacing:.3px; }
+  header.topbar .sub { font-size:12px; color:#8a92a3; margin-top:2px; }
+
+  main { flex:1; overflow-y:auto; padding: 14px 14px 90px; }
+
+  /* Tabs */
+  nav.tabs {
+    position: fixed; bottom:0; left:0; right:0;
+    display:flex;
+    background:#14171d;
+    border-top:1px solid #232733;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    z-index: 50;
+  }
+  nav.tabs button {
+    flex:1; background:none; border:none; color:#6b7280;
+    padding: 10px 4px 8px; font-size:11px; display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  nav.tabs button .ic { font-size:20px; }
+  nav.tabs button.active { color:#4ade80; }
+
+  /* Cards */
+  .card {
+    background:#181c25; border:1px solid #232733; border-radius:14px;
+    padding:14px; margin-bottom:12px;
+  }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat { text-align:center; }
+  .stat .num { font-size:22px; font-weight:800; }
+  .stat .lbl { font-size:11px; color:#8a92a3; margin-top:2px; }
+  .green { color:#4ade80; } .red { color:#f87171; } .amber { color:#fbbf24; }
+
+  .section-title { font-size:13px; color:#8a92a3; text-transform:uppercase; letter-spacing:.5px; margin: 18px 0 8px; }
+
+  .list-item {
+    display:flex; align-items:center; gap:12px;
+    background:#181c25; border:1px solid #232733; border-radius:14px;
+    padding:12px 14px; margin-bottom:8px;
+  }
+  .avatar {
+    width:40px; height:40px; border-radius:50%; background:#232733;
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:#4ade80; flex-shrink:0;
+  }
+  .li-main { flex:1; min-width:0; }
+  .li-name { font-weight:600; font-size:15px; }
+  .li-sub { font-size:12px; color:#8a92a3; margin-top:1px; }
+  .li-value { font-weight:700; font-size:15px; white-space:nowrap; }
+
+  .fab {
+    position: fixed; right:16px; bottom:82px; z-index:40;
+    width:56px; height:56px; border-radius:50%;
+    background:#4ade80; color:#0f1115; border:none;
+    font-size:28px; font-weight:700; box-shadow:0 6px 16px rgba(74,222,128,.35);
+  }
+  .fab.fab-mic {
+    right:82px; background:#818cf8; color:#0f1115; font-size:22px;
+    box-shadow:0 6px 16px rgba(129,140,248,.35);
+  }
+  .fab.fab-mic.rec { background:#f87171; box-shadow:0 6px 16px rgba(248,113,113,.4); }
+  .mic-pill {
+    display:inline-flex; align-items:center; gap:6px; font-size:11px;
+    padding:5px 10px; border-radius:20px; margin-top:8px;
+  }
+  .mic-pill.online { background:#1a3a2a; color:#4ade80; }
+  .mic-pill.offline { background:#3a1f22; color:#f87171; }
+
+  input, select {
+    width:100%; background:#0f1115; border:1px solid #2a3040; color:#eef0f3;
+    padding:12px; border-radius:10px; font-size:15px; margin-bottom:10px;
+  }
+  label { font-size:12px; color:#8a92a3; display:block; margin-bottom:4px; }
+  button.primary {
+    width:100%; background:#4ade80; color:#0f1115; border:none;
+    padding:13px; border-radius:10px; font-weight:700; font-size:15px;
+  }
+  button.secondary {
+    width:100%; background:#232733; color:#eef0f3; border:1px solid #2a3040;
+    padding:13px; border-radius:10px; font-weight:600; font-size:14px; margin-top:8px;
+  }
+  button.danger { background:#3a1f22; color:#f87171; border:1px solid #4a2226; }
+
+  /* Modal / sheet */
+  .overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:100;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .sheet {
+    background:#14171d; width:100%; max-width:520px; border-radius:20px 20px 0 0;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom,0));
+    max-height:88vh; overflow-y:auto;
+    border-top:1px solid #232733;
+  }
+  .sheet-handle { width:40px; height:4px; background:#2a3040; border-radius:2px; margin:0 auto 14px; }
+  .sheet-title { font-size:17px; font-weight:700; margin-bottom:14px; }
+  .close-x { position:absolute; top:14px; right:16px; background:none; border:none; color:#8a92a3; font-size:22px; }
+
+  /* Valor rápido */
+  .quickvals { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .qv { background:#232733; color:#eef0f3; border:1px solid #2a3040; padding:10px 14px; border-radius:10px; font-size:14px; font-weight:600; }
+  .qv.active { background:#4ade80; color:#0f1115; border-color:#4ade80; }
+
+  .toggle2 { display:flex; background:#0f1115; border:1px solid #2a3040; border-radius:10px; overflow:hidden; margin-bottom:12px; }
+  .toggle2 button { flex:1; padding:11px; background:none; border:none; color:#8a92a3; font-weight:600; font-size:14px; }
+  .toggle2 button.on.divida { background:#3a1f22; color:#f87171; }
+  .toggle2 button.on.pagamento { background:#1a3a2a; color:#4ade80; }
+
+  .hist-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #1e222c; font-size:13px; }
+  .hist-item:last-child { border-bottom:none; }
+  .hist-desc { color:#c7cbd4; }
+  .hist-date { color:#6b7280; font-size:11px; }
+
+  .empty { text-align:center; padding:40px 20px; color:#6b7280; font-size:14px; }
+
+  .badge { font-size:10px; padding:3px 8px; border-radius:20px; font-weight:700; }
+  .badge.pend { background:#3a1f22; color:#f87171; }
+  .badge.ok { background:#1a3a2a; color:#4ade80; }
+
+  .mini-btn { background:#232733; border:1px solid #2a3040; color:#eef0f3; padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="topbar">
+    <h1 id="pageTitle">📒 Fiado Fácil</h1>
+    <div class="sub" id="pageSub">tudo salvo no seu telemóvel</div>
+  </header>
+
+  <main id="main"></main>
+
+  <nav class="tabs">
+    <button data-tab="inicio" class="active"><span class="ic">🏠</span>Início</button>
+    <button data-tab="fiado"><span class="ic">📒</span>Fiado</button>
+    <button data-tab="estoque"><span class="ic">📦</span>Estoque</button>
+  </nav>
+</div>
+
+<div id="overlayRoot"></div>
+
+<script>
+/* ================= IndexedDB ================= */
+let db;
+const DB_NAME = 'fiadoFacilDB', DB_VER = 1;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('clientes')) {
+        d.createObjectStore('clientes', { keyPath:'id', autoIncrement:true });
+      }
+      if (!d.objectStoreNames.contains('produtos')) {
+        d.createObjectStore('produtos', { keyPath:'id', autoIncrement:true });
+      }
+      if (!d.objectStoreNames.contains('transacoes')) {
+        const t = d.createObjectStore('transacoes', { keyPath:'id', autoIncrement:true });
+        t.createIndex('cliente_id', 'cliente_id');
+        t.createIndex('produto_id', 'produto_id');
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function tx(store, mode='readonly') {
+  return db.transaction(store, mode).objectStore(store);
+}
+function all(store) {
+  return new Promise((res) => {
+    const items = [];
+    tx(store).openCursor().onsuccess = (e) => {
+      const c = e.target.result;
+      if (c) { items.push(c.value); c.continue(); } else res(items);
+    };
+  });
+}
+function get(store, id) {
+  return new Promise((res) => { tx(store).get(id).onsuccess = (e) => res(e.target.result); });
+}
+function put(store, obj) {
+  return new Promise((res) => { tx(store, 'readwrite').put(obj).onsuccess = (e) => res(e.target.result); });
+}
+function add(store, obj) {
+  return new Promise((res) => { tx(store, 'readwrite').add(obj).onsuccess = (e) => res(e.target.result); });
+}
+function del(store, id) {
+  return new Promise((res) => { tx(store, 'readwrite').delete(id).onsuccess = () => res(); });
+}
+function byIndex(store, index, value) {
+  return new Promise((res) => {
+    const items = [];
+    tx(store).index(index).openCursor(IDBKeyRange.only(value)).onsuccess = (e) => {
+      const c = e.target.result;
+      if (c) { items.push(c.value); c.continue(); } else res(items);
+    };
+  });
+}
+
+/* ================= Helpers ================= */
+function kz(v) {
+  return (v||0).toLocaleString('pt-PT', {maximumFractionDigits:0}) + ' Kz';
+}
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-PT', {day:'2-digit', month:'2-digit', year:'2-digit'});
+}
+function initials(name) {
+  return (name||'?').trim().split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()).join('');
+}
+function nowISO() { return new Date().toISOString(); }
+
+async function saldoCliente(clienteId) {
+  const trs = await byIndex('transacoes', 'cliente_id', clienteId);
+  let saldo = 0;
+  trs.forEach(t => { saldo += t.tipo === 'divida' ? t.valor : -t.valor; });
+  return saldo;
+}
+
+async function quantidadeDevidaProduto(produtoId) {
+  const trs = await byIndex('transacoes', 'produto_id', produtoId);
+  let q = 0;
+  trs.forEach(t => { if (t.tipo === 'divida' && !t.pago) q += (t.quantidade||0); });
+  return q;
+}
+
+/* ================= Navigation ================= */
+const mainEl = document.getElementById('main');
+const overlayRoot = document.getElementById('overlayRoot');
+let currentTab = 'inicio';
+
+document.querySelectorAll('nav.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  if (tab === 'inicio') renderInicio();
+  if (tab === 'fiado') renderFiado();
+  if (tab === 'estoque') renderEstoque();
+}
+
+function closeOverlay() { overlayRoot.innerHTML = ''; }
+function openSheet(title, innerHTML) {
+  overlayRoot.innerHTML = `
+    <div class="overlay" id="ov">
+      <div class="sheet" style="position:relative;">
+        <button class="close-x" onclick="closeOverlay()">✕</button>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">${title}</div>
+        <div id="sheetBody">${innerHTML}</div>
+      </div>
+    </div>`;
+  document.getElementById('ov').addEventListener('click', (e) => { if (e.target.id === 'ov') closeOverlay(); });
+}
+
+/* ================= INÍCIO ================= */
+async function renderInicio() {
+  document.getElementById('pageTitle').textContent = '📒 Fiado Fácil';
+  document.getElementById('pageSub').textContent = 'tudo salvo no seu telemóvel';
+
+  const clientes = await all('clientes');
+  const produtos = await all('produtos');
+  const trs = await all('transacoes');
+
+  let totalReceber = 0;
+  const saldos = {};
+  for (const c of clientes) {
+    const s = await saldoCliente(c.id);
+    saldos[c.id] = s;
+    if (s > 0) totalReceber += s;
+  }
+
+  let valorEstoque = 0, totalVendido = 0;
+  produtos.forEach(p => { valorEstoque += (p.quantidade||0) * (p.preco||0); totalVendido += (p.quantidade_vendida||0); });
+
+  const recentes = [...trs].sort((a,b)=> new Date(b.data)-new Date(a.data)).slice(0,6);
+
+  let recentesHTML = '';
+  if (!recentes.length) {
+    recentesHTML = `<div class="empty">Nenhum registro ainda.<br>Comece pela aba Fiado ou Estoque.</div>`;
+  } else {
+    for (const t of recentes) {
+      const c = t.cliente_id ? await get('clientes', t.cliente_id) : null;
+      recentesHTML += `
+        <div class="hist-item">
+          <div>
+            <div class="hist-desc">${t.tipo==='divida'?'🔴':'🟢'} ${c?c.nome:''} ${t.descricao?('· '+t.descricao):''}</div>
+            <div class="hist-date">${fmtDate(t.data)}</div>
+          </div>
+          <div class="li-value ${t.tipo==='divida'?'red':'green'}">${t.tipo==='divida'?'+':'-'}${kz(t.valor)}</div>
+        </div>`;
+    }
+  }
+
+  mainEl.innerHTML = `
+    <div class="card">
+      <div class="grid2">
+        <div class="stat"><div class="num red">${kz(totalReceber)}</div><div class="lbl">a receber</div></div>
+        <div class="stat"><div class="num amber">${kz(valorEstoque)}</div><div class="lbl">valor em estoque</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="grid2">
+        <div class="stat"><div class="num">${clientes.length}</div><div class="lbl">clientes</div></div>
+        <div class="stat"><div class="num green">${totalVendido}</div><div class="lbl">produtos vendidos</div></div>
+      </div>
+    </div>
+    <div class="section-title">Últimos registros</div>
+    <div class="card" style="padding:6px 14px;">${recentesHTML}</div>
+  `;
+}
+
+/* ================= FIADO (clientes) ================= */
+async function renderFiado() {
+  document.getElementById('pageTitle').textContent = '📒 Fiado';
+  document.getElementById('pageSub').textContent = 'clientes e dívidas';
+
+  const clientes = await all('clientes');
+  let itemsHTML = '';
+
+  if (!clientes.length) {
+    itemsHTML = `<div class="empty">Nenhum cliente ainda.<br>Toque no + para adicionar.</div>`;
+  } else {
+    const withSaldo = [];
+    for (const c of clientes) withSaldo.push({ c, saldo: await saldoCliente(c.id) });
+    withSaldo.sort((a,b) => b.saldo - a.saldo);
+
+    for (const {c, saldo} of withSaldo) {
+      itemsHTML += `
+        <div class="list-item" onclick="abrirCliente(${c.id})">
+          <div class="avatar">${initials(c.nome)}</div>
+          <div class="li-main">
+            <div class="li-name">${c.nome}</div>
+            <div class="li-sub">${c.telefone || 'sem telefone'}</div>
+          </div>
+          <div class="li-value ${saldo>0?'red':'green'}">${saldo>0?kz(saldo):'em dia'}</div>
+        </div>`;
+    }
+  }
+
+  mainEl.innerHTML = `<div id="listaClientes">${itemsHTML}</div>`;
+  mainEl.insertAdjacentHTML('beforeend', `<button class="fab" onclick="novoClienteSheet()">+</button>`);
+  mainEl.insertAdjacentHTML('beforeend', `<button class="fab fab-mic" onclick="abrirVozSheet()">🎤</button>`);
+}
+
+function novoClienteSheet() {
+  openSheet('Novo cliente', `
+    <label>Nome</label>
+    <input id="ncNome" placeholder="Ex: Maria João" autofocus>
+    <label>Telefone (opcional)</label>
+    <input id="ncTel" placeholder="Ex: 923 000 000">
+    <button class="primary" onclick="salvarCliente()">Guardar cliente</button>
+  `);
+}
+
+async function salvarCliente() {
+  const nome = document.getElementById('ncNome').value.trim();
+  const telefone = document.getElementById('ncTel').value.trim();
+  if (!nome) { alert('Digite o nome do cliente'); return; }
+  await add('clientes', { nome, telefone, criado_em: nowISO() });
+  closeOverlay();
+  renderFiado();
+}
+
+async function abrirCliente(id) {
+  const c = await get('clientes', id);
+  const saldo = await saldoCliente(id);
+  const trs = (await byIndex('transacoes', 'cliente_id', id)).sort((a,b)=> new Date(b.data)-new Date(a.data));
+
+  let histHTML = '';
+  if (!trs.length) {
+    histHTML = `<div class="empty">Sem lançamentos ainda.</div>`;
+  } else {
+    for (const t of trs) {
+      let extra = '';
+      if (t.tipo === 'divida' && t.produto_id) {
+        extra = `<span class="badge ${t.pago?'ok':'pend'}" style="margin-left:6px;">${t.pago?'pago':'pendente'}</span>`;
+      }
+      histHTML += `
+        <div class="hist-item">
+          <div>
+            <div class="hist-desc">${t.tipo==='divida'?'🔴 Dívida':'🟢 Pagamento'} ${t.descricao?('· '+t.descricao):''} ${extra}</div>
+            <div class="hist-date">${fmtDate(t.data)}</div>
+          </div>
+          <div class="li-value ${t.tipo==='divida'?'red':'green'}">${kz(t.valor)}</div>
+        </div>`;
+    }
+  }
+
+  openSheet(c.nome, `
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat"><div class="num ${saldo>0?'red':'green'}">${kz(Math.abs(saldo))}</div><div class="lbl">${saldo>0?'saldo devedor':'em dia'}</div></div>
+      <div class="stat"><div class="num">${c.telefone||'—'}</div><div class="lbl">telefone</div></div>
+    </div>
+    <button class="primary" onclick="lancamentoSheet(${id})">➕ Novo lançamento</button>
+    <button class="secondary danger" onclick="apagarCliente(${id})">Apagar cliente</button>
+    <div class="section-title">Histórico</div>
+    ${histHTML}
+  `);
+}
+
+async function apagarCliente(id) {
+  if (!confirm('Apagar este cliente e todo o histórico dele?')) return;
+  const trs = await byIndex('transacoes', 'cliente_id', id);
+  for (const t of trs) await del('transacoes', t.id);
+  await del('clientes', id);
+  closeOverlay();
+  renderFiado();
+}
+
+/* Lançamento rápido: dívida ou pagamento, com valores rápidos e produto opcional */
+async function lancamentoSheet(clienteId, tipoInicial='divida') {
+  const produtos = await all('produtos');
+  let prodOptions = `<option value="">— sem produto (valor livre) —</option>`;
+  produtos.forEach(p => { prodOptions += `<option value="${p.id}" data-preco="${p.preco}" data-estoque="${p.quantidade}">${p.nome} (estoque: ${p.quantidade})</option>`; });
+
+  openSheet('Novo lançamento', `
+    <div class="toggle2" id="tipoToggle">
+      <button type="button" class="on divida" data-tipo="divida" onclick="setTipoLanc('divida')">🔴 Dívida</button>
+      <button type="button" data-tipo="pagamento" onclick="setTipoLanc('pagamento')">🟢 Pagamento</button>
+    </div>
+
+    <div id="produtoBlock">
+      <label>Produto (opcional)</label>
+      <select id="lProduto" onchange="prodSelecionado()">${prodOptions}</select>
+      <div id="qtdBlock" style="display:none;">
+        <label>Quantidade</label>
+        <input id="lQtd" type="number" min="1" value="1" oninput="recalcularValorProduto()">
+      </div>
+    </div>
+
+    <label>Valor (Kz)</label>
+    <div class="quickvals" id="quickvals">
+      ${[500,1000,2000,5000,10000].map(v=>`<button type="button" class="qv" onclick="setValor(${v})">${v.toLocaleString('pt-PT')}</button>`).join('')}
+    </div>
+    <input id="lValor" type="number" placeholder="0" inputmode="numeric">
+
+    <label>Descrição (opcional)</label>
+    <div style="display:flex; gap:8px;">
+      <input id="lDesc" placeholder="Ex: pão e açúcar" style="flex:1;">
+      <button type="button" id="micBtn" onclick="toggleVoz()" style="flex-shrink:0; width:48px; background:#232733; border:1px solid #2a3040; color:#eef0f3; border-radius:10px; font-size:18px;">🎤</button>
+    </div>
+    <div id="micStatus" style="font-size:11px; color:#6b7280; margin:-4px 0 10px;"></div>
+
+    <button class="primary" onclick="salvarLancamento(${clienteId})">Guardar</button>
+  `);
+  setTipoLanc(tipoInicial);
+}
+
+/* ----- Entrada por voz ----- */
+let recognition = null;
+let ouvindo = false;
+
+function toggleVoz() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = document.getElementById('micBtn');
+  const status = document.getElementById('micStatus');
+
+  if (!SR) {
+    status.textContent = 'Reconhecimento de voz não disponível neste navegador.';
+    return;
+  }
+
+  if (ouvindo) {
+    recognition && recognition.stop();
+    return;
+  }
+
+  recognition = new SR();
+  recognition.lang = 'pt-PT';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    ouvindo = true;
+    micBtn.textContent = '🔴';
+    status.textContent = 'A ouvir... fale o valor e o item, ex: "dois mil kwanzas de pão"';
+  };
+
+  recognition.onresult = (e) => {
+    const texto = e.results[0][0].transcript;
+    processarVoz(texto);
+  };
+
+  recognition.onerror = () => {
+    status.textContent = 'Não entendi. Tente novamente ou digite.';
+  };
+
+  recognition.onend = () => {
+    ouvindo = false;
+    micBtn.textContent = '🎤';
+  };
+
+  recognition.start();
+}
+
+function processarVoz(texto) {
+  const status = document.getElementById('micStatus');
+  status.textContent = `Ouvido: "${texto}"`;
+
+  // tenta achar um valor numérico no texto (dígitos ou por extenso simples)
+  let valor = extrairValor(texto);
+  if (valor) {
+    document.getElementById('lValor').value = valor;
+    setValor(valor); // marca botão rápido se existir, senão só ignora visualmente
+  }
+
+  // descrição = texto sem o número e palavras de moeda
+  let desc = texto
+    .replace(/\d+/g, '')
+    .replace(/kwanzas?|kz/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (desc) document.getElementById('lDesc').value = desc;
+}
+
+function extrairValor(texto) {
+  // 1) tenta dígitos diretos, ex: "2000 kwanzas"
+  const m = texto.match(/\d+/);
+  if (m) return parseInt(m[0]);
+
+  // 2) tenta números por extenso simples (comuns em fiado)
+  const mapa = {
+    'cem':100,'cento':100,'duzentos':200,'trezentos':300,'quatrocentos':400,
+    'quinhentos':500,'seiscentos':600,'setecentos':700,'oitocentos':800,'novecentos':900,
+    'mil':1000,'dois mil':2000,'três mil':3000,'quatro mil':4000,'cinco mil':5000,
+    'dez mil':10000,'vinte mil':20000
+  };
+  const t = texto.toLowerCase();
+  for (const chave of Object.keys(mapa).sort((a,b)=>b.length-a.length)) {
+    if (t.includes(chave)) return mapa[chave];
+  }
+  return null;
+}
+
+let tipoLancAtual = 'divida';
+function setTipoLanc(tipo) {
+  tipoLancAtual = tipo;
+  document.querySelectorAll('#tipoToggle button').forEach(b => b.classList.toggle('on', b.dataset.tipo === tipo));
+  document.getElementById('produtoBlock').style.display = tipo === 'divida' ? 'block' : 'none';
+}
+function setValor(v) {
+  document.getElementById('lValor').value = v;
+  document.querySelectorAll('#quickvals .qv').forEach(b => b.classList.toggle('active', b.textContent.replace(/\D/g,'') == v));
+}
+function prodSelecionado() {
+  const sel = document.getElementById('lProduto');
+  const qtdBlock = document.getElementById('qtdBlock');
+  qtdBlock.style.display = sel.value ? 'block' : 'none';
+  recalcularValorProduto();
+}
+function recalcularValorProduto() {
+  const sel = document.getElementById('lProduto');
+  if (!sel.value) return;
+  const preco = parseFloat(sel.selectedOptions[0].dataset.preco || 0);
+  const qtd = parseInt(document.getElementById('lQtd').value || 1);
+  document.getElementById('lValor').value = preco * qtd;
+}
+
+async function salvarLancamento(clienteId) {
+  const valor = parseFloat(document.getElementById('lValor').value);
+  const desc = document.getElementById('lDesc').value.trim();
+  if (!valor || valor <= 0) { alert('Digite um valor válido'); return; }
+
+  let produto_id = null, quantidade = null;
+  if (tipoLancAtual === 'divida') {
+    const sel = document.getElementById('lProduto');
+    if (sel.value) {
+      produto_id = parseInt(sel.value);
+      quantidade = parseInt(document.getElementById('lQtd').value || 1);
+      const prod = await get('produtos', produto_id);
+      if (quantidade > prod.quantidade) { alert('Quantidade maior que o estoque disponível (' + prod.quantidade + ')'); return; }
+      prod.quantidade -= quantidade;
+      prod.quantidade_vendida = (prod.quantidade_vendida || 0) + quantidade;
+      await put('produtos', prod);
+    }
+  }
+
+  await add('transacoes', {
+    cliente_id: clienteId,
+    tipo: tipoLancAtual,
+    valor, descricao: desc,
+    produto_id, quantidade,
+    pago: tipoLancAtual === 'pagamento' ? true : false,
+    data: nowISO()
+  });
+
+  closeOverlay();
+  abrirCliente(clienteId);
+}
+
+/* ================= LANÇAMENTO POR VOZ (requer internet) ================= */
+function normalize(s) {
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+
+const NUM_PALAVRAS = {
+  'zero':0,'um':1,'uma':1,'dois':2,'duas':2,'tres':3,'quatro':4,'cinco':5,'seis':6,'sete':7,'oito':8,'nove':9,'dez':10,
+  'onze':11,'doze':12,'treze':13,'catorze':14,'quinze':15,'vinte':20,'trinta':30,'quarenta':40,'cinquenta':50,
+  'cem':100,'cento':100,'duzentos':200,'trezentos':300,'quatrocentos':400,'quinhentos':500,'seiscentos':600,
+  'setecentos':700,'oitocentos':800,'novecentos':900
+};
+
+function parseValor(textoNorm) {
+  // 1) tenta número em dígitos (ex: "2000", "1.500")
+  const mDigito = textoNorm.match(/(\d[\d.,]*\d|\d)/);
+  if (mDigito) {
+    let v = parseFloat(mDigito[1].replace(/\./g,'').replace(',', '.'));
+    if (/\bmil\b/.test(textoNorm) && v < 1000) v *= 1000; // ex: "2 mil"
+    return v;
+  }
+  // 2) tenta números por extenso (ex: "dois mil", "cinco mil e quinhentos")
+  const palavras = textoNorm.split(/\s+/);
+  let total = 0, achou = false;
+  for (let i=0; i<palavras.length; i++) {
+    const p = palavras[i];
+    if (p === 'mil') {
+      total = (total || 1) * 1000; achou = true;
+    } else if (NUM_PALAVRAS[p] !== undefined) {
+      total += NUM_PALAVRAS[p]; achou = true;
+    }
+  }
+  return achou ? total : null;
+}
+
+function parseVoz(textoOriginal, clientesNomes) {
+  const textoNorm = normalize(textoOriginal);
+  const tipo = /\bpag(ou|amento|ar|a)\b/.test(textoNorm) ? 'pagamento' : 'divida';
+  const valor = parseValor(textoNorm);
+
+  // tenta achar nome de cliente já cadastrado dentro da frase
+  let nomeDetectado = null;
+  for (const nome of clientesNomes) {
+    if (nome && textoNorm.includes(normalize(nome))) { nomeDetectado = nome; break; }
+  }
+  // se não achou, assume que o nome é a(s) primeira(s) palavra(s) antes do número/valor
+  if (!nomeDetectado) {
+    const stop = ['fiado','de','dele','dela','kwanza','kwanzas','kz','pagou','pagamento','pagar','registra','regista','anota','lanca','lança','o','a','um','uma','mil','e'];
+    const partes = textoOriginal.split(/[,]|\bde\b/i)[0].split(/\s+/).filter(w => !stop.includes(normalize(w)) && !/\d/.test(w));
+    nomeDetectado = partes.slice(0,2).join(' ').trim();
+  }
+
+  const descricao = textoOriginal.replace(new RegExp(nomeDetectado, 'i'), '').trim();
+
+  return { tipo, valor, nomeDetectado, descricao: descricao.slice(0,60) };
+}
+
+async function abrirVozSheet() {
+  if (!window.isSecureContext) {
+    alert('🎤 O microfone só funciona em endereços HTTPS. Se estás a abrir o ficheiro direto no telemóvel (file://), publica primeiro no GitHub Pages — lá funciona.');
+    return;
+  }
+  if (!navigator.onLine) {
+    alert('🎤 O lançamento por voz precisa de internet para funcionar. Você está offline agora — use os botões normais, que funcionam sem rede.');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    alert('Reconhecimento de voz não é suportado neste navegador.');
+    return;
+  }
+  openSheet('🎤 Lançamento por voz', `
+    <div class="mic-pill online">🟢 online — ativo</div>
+    <p style="font-size:13px; color:#8a92a3; margin:12px 0;">
+      Toque no microfone e diga, por exemplo:<br>
+      <span style="color:#c7cbd4;">"Maria, dois mil, pão e açúcar"</span>
+    </p>
+    <div style="text-align:center; margin: 18px 0;">
+      <button id="micBtn" onclick="iniciarReconhecimento()" style="width:80px;height:80px;border-radius:50%;background:#818cf8;border:none;font-size:32px;">🎤</button>
+    </div>
+    <div id="vozStatus" style="text-align:center; font-size:13px; color:#8a92a3; min-height:20px;"></div>
+  `);
+}
+
+async function iniciarReconhecimento() {
+  const statusEl = document.getElementById('vozStatus');
+  const micBtn = document.getElementById('micBtn');
+
+  // pede permissão de microfone explicitamente primeiro, pra dar erro claro se for negado
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop());
+  } catch (permErr) {
+    statusEl.textContent = '🚫 Permissão de microfone negada. Vai nas configurações do navegador e permite o microfone para este site.';
+    return;
+  }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = 'pt-PT';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  micBtn.style.background = '#f87171';
+  statusEl.textContent = 'A ouvir... fale agora';
+
+  rec.onresult = async (e) => {
+    const texto = e.results[0][0].transcript;
+    statusEl.textContent = 'Ouvi: "' + texto + '"';
+    const clientes = await all('clientes');
+    const parsed = parseVoz(texto, clientes.map(c => c.nome));
+    setTimeout(() => confirmVozSheet(parsed, clientes), 400);
+  };
+  rec.onerror = (e) => {
+    micBtn.style.background = '#818cf8';
+    const msgs = {
+      'not-allowed': '🚫 Permissão de microfone negada.',
+      'no-speech': 'Não percebi nenhuma fala. Toque e tente de novo, falando logo após tocar.',
+      'network': '📶 Falha de rede — o reconhecimento de voz precisa de internet ativa.',
+      'audio-capture': '🎤 Não encontrei microfone neste aparelho/navegador.'
+    };
+    statusEl.textContent = msgs[e.error] || ('Não consegui ouvir (' + e.error + '). Toque para tentar de novo.');
+  };
+  rec.onend = () => { micBtn.style.background = '#818cf8'; };
+
+  try {
+    rec.start();
+  } catch (err) {
+    statusEl.textContent = 'Erro ao iniciar o microfone: ' + err.message;
+  }
+}
+
+function confirmVozSheet(parsed, clientes) {
+  const opts = clientes.map(c => `<option value="${c.nome}" data-id="${c.id}">${c.nome}</option>`).join('');
+  openSheet('Confirmar lançamento', `
+    <p style="font-size:12px; color:#8a92a3; margin-bottom:12px;">Confira e corrija se precisar antes de guardar.</p>
+
+    <label>Cliente</label>
+    <input id="vNome" list="listaNomesVoz" value="${parsed.nomeDetectado || ''}" placeholder="Nome do cliente">
+    <datalist id="listaNomesVoz">${opts}</datalist>
+
+    <div class="toggle2" id="tipoToggleVoz">
+      <button type="button" class="${parsed.tipo==='divida'?'on divida':''}" data-tipo="divida" onclick="setTipoVoz('divida')">🔴 Dívida</button>
+      <button type="button" class="${parsed.tipo==='pagamento'?'on pagamento':''}" data-tipo="pagamento" onclick="setTipoVoz('pagamento')">🟢 Pagamento</button>
+    </div>
+
+    <label>Valor (Kz)</label>
+    <input id="vValor" type="number" value="${parsed.valor || ''}" placeholder="0">
+
+    <label>Descrição</label>
+    <input id="vDesc" value="${parsed.descricao || ''}">
+
+    <button class="primary" onclick="salvarVoz()">Guardar lançamento</button>
+    <button class="secondary" onclick="abrirVozSheet()">🎤 Tentar de novo</button>
+  `);
+}
+
+let tipoVozAtual = 'divida';
+function setTipoVoz(tipo) {
+  tipoVozAtual = tipo;
+  document.querySelectorAll('#tipoToggleVoz button').forEach(b => {
+    b.classList.toggle('on', b.dataset.tipo === tipo);
+    b.classList.toggle(tipo==='divida'?'divida':'pagamento', b.dataset.tipo===tipo);
+  });
+}
+// inicializa a partir do parsed na primeira renderização
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.closest && e.target.closest('#tipoToggleVoz')) return;
+}, true);
+
+async function salvarVoz() {
+  const nome = document.getElementById('vNome').value.trim();
+  const valor = parseFloat(document.getElementById('vValor').value);
+  const desc = document.getElementById('vDesc').value.trim();
+  const tipoBtn = document.querySelector('#tipoToggleVoz button.on');
+  const tipo = tipoBtn ? tipoBtn.dataset.tipo : 'divida';
+
+  if (!nome) { alert('Digite ou confirme o nome do cliente'); return; }
+  if (!valor || valor <= 0) { alert('Digite um valor válido'); return; }
+
+  // acha cliente existente (por nome) ou cria um novo
+  const clientes = await all('clientes');
+  let cliente = clientes.find(c => normalize(c.nome) === normalize(nome));
+  let clienteId;
+  if (cliente) {
+    clienteId = cliente.id;
+  } else {
+    clienteId = await add('clientes', { nome, telefone:'', criado_em: nowISO() });
+  }
+
+  await add('transacoes', {
+    cliente_id: clienteId, tipo, valor, descricao: desc,
+    produto_id: null, quantidade: null,
+    pago: tipo === 'pagamento' ? true : false,
+    data: nowISO()
+  });
+
+  closeOverlay();
+  renderFiado();
+}
+
+/* ================= ESTOQUE (produtos) ================= */
+async function renderEstoque() {
+  document.getElementById('pageTitle').textContent = '📦 Estoque';
+  document.getElementById('pageSub').textContent = 'produtos, vendas e dívidas por produto';
+
+  const produtos = await all('produtos');
+  let itemsHTML = '';
+
+  if (!produtos.length) {
+    itemsHTML = `<div class="empty">Nenhum produto ainda.<br>Toque no + para adicionar.</div>`;
+  } else {
+    for (const p of produtos) {
+      const devida = await quantidadeDevidaProduto(p.id);
+      itemsHTML += `
+        <div class="list-item" onclick="abrirProduto(${p.id})">
+          <div class="avatar">📦</div>
+          <div class="li-main">
+            <div class="li-name">${p.nome}</div>
+            <div class="li-sub">estoque: ${p.quantidade} · vendidos: ${p.quantidade_vendida||0}${devida?(' · devidos: '+devida):''}</div>
+          </div>
+          <div class="li-value">${kz(p.preco)}</div>
+        </div>`;
+    }
+  }
+
+  mainEl.innerHTML = `<div>${itemsHTML}</div>`;
+  mainEl.insertAdjacentHTML('beforeend', `<button class="fab" onclick="novoProdutoSheet()">+</button>`);
+  mainEl.insertAdjacentHTML('beforeend', `<button class="fab fab-mic" onclick="abrirVozEstoqueSheet()">🎤</button>`);
+}
+
+function novoProdutoSheet() {
+  const hoje = new Date().toISOString().slice(0,10);
+  openSheet('Novo produto', `
+    <label>Nome do produto</label>
+    <input id="pNome" placeholder="Ex: Saco de açúcar 1kg" autofocus>
+    <label>Quantidade recebida</label>
+    <input id="pQtd" type="number" min="0" placeholder="Ex: 50">
+    <label>Preço unitário (Kz)</label>
+    <input id="pPreco" type="number" min="0" placeholder="Ex: 1500">
+    <label>Data de entrega</label>
+    <input id="pData" type="date" value="${hoje}">
+    <button class="primary" onclick="salvarProduto()">Guardar produto</button>
+  `);
+}
+
+async function salvarProduto() {
+  const nome = document.getElementById('pNome').value.trim();
+  const quantidade = parseInt(document.getElementById('pQtd').value || 0);
+  const preco = parseFloat(document.getElementById('pPreco').value || 0);
+  const data_entrega = document.getElementById('pData').value;
+  if (!nome) { alert('Digite o nome do produto'); return; }
+  await add('produtos', { nome, quantidade, preco, data_entrega, quantidade_vendida: 0 });
+  closeOverlay();
+  renderEstoque();
+}
+
+async function abrirProduto(id) {
+  const p = await get('produtos', id);
+  const devida = await quantidadeDevidaProduto(id);
+  const trs = (await byIndex('transacoes', 'produto_id', id)).sort((a,b)=> new Date(b.data)-new Date(a.data));
+
+  let devidoresHTML = '';
+  const pendentes = trs.filter(t => t.tipo==='divida' && !t.pago);
+  if (!pendentes.length) {
+    devidoresHTML = `<div class="empty" style="padding:20px;">Nenhuma dívida pendente deste produto.</div>`;
+  } else {
+    for (const t of pendentes) {
+      const c = await get('clientes', t.cliente_id);
+      devidoresHTML += `
+        <div class="hist-item">
+          <div>
+            <div class="hist-desc">${c?c.nome:'?'} · ${t.quantidade}x</div>
+            <div class="hist-date">${fmtDate(t.data)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="li-value red">${kz(t.valor)}</div>
+            <button class="mini-btn" onclick="marcarItemPago(${t.id}, ${id})">marcar pago</button>
+          </div>
+        </div>`;
+    }
+  }
+
+  openSheet(p.nome, `
+    <div class="grid2" style="margin-bottom:6px;">
+      <div class="stat"><div class="num">${p.quantidade}</div><div class="lbl">em estoque</div></div>
+      <div class="stat"><div class="num">${kz(p.preco)}</div><div class="lbl">preço unitário</div></div>
+    </div>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat"><div class="num green">${p.quantidade_vendida||0}</div><div class="lbl">vendidos</div></div>
+      <div class="stat"><div class="num amber">${devida}</div><div class="lbl">devidos (fiado)</div></div>
+    </div>
+    <div class="li-sub" style="text-align:center;margin-bottom:14px;">entregue em ${p.data_entrega ? fmtDate(p.data_entrega) : '—'}</div>
+    <button class="secondary" onclick="editarEstoqueSheet(${id})">✏️ Ajustar estoque / preço</button>
+    <button class="secondary danger" onclick="apagarProduto(${id})">Apagar produto</button>
+    <div class="section-title">Clientes que devem este produto</div>
+    ${devidoresHTML}
+  `);
+}
+
+function editarEstoqueSheet(id) {
+  get('produtos', id).then(p => {
+    openSheet('Ajustar ' + p.nome, `
+      <label>Quantidade em estoque</label>
+      <input id="eQtd" type="number" value="${p.quantidade}">
+      <label>Preço unitário (Kz)</label>
+      <input id="ePreco" type="number" value="${p.preco}">
+      <button class="primary" onclick="salvarAjusteProduto(${id})">Guardar alterações</button>
+    `);
+  });
+}
+
+async function salvarAjusteProduto(id) {
+  const p = await get('produtos', id);
+  p.quantidade = parseInt(document.getElementById('eQtd').value || 0);
+  p.preco = parseFloat(document.getElementById('ePreco').value || 0);
+  await put('produtos', p);
+  closeOverlay();
+  abrirProduto(id);
+}
+
+async function apagarProduto(id) {
+  if (!confirm('Apagar este produto do estoque?')) return;
+  await del('produtos', id);
+  closeOverlay();
+  renderEstoque();
+}
+
+async function marcarItemPago(transacaoId, produtoId) {
+  const t = await get('transacoes', transacaoId);
+  t.pago = true;
+  await put('transacoes', t);
+  // cria pagamento correspondente para manter o saldo do cliente coerente
+  await add('transacoes', {
+    cliente_id: t.cliente_id, tipo:'pagamento', valor: t.valor,
+    descricao: 'Pagamento de item de estoque', produto_id: null, quantidade: null,
+    pago: true, data: nowISO()
+  });
+  abrirProduto(produtoId);
+}
+
+/* ================= ESTOQUE POR VOZ (requer internet) ================= */
+function extractNumeros(textoNorm) {
+  const tokens = textoNorm.split(/\s+/);
+  const nums = [];
+  let buffer = 0, buffering = false;
+  for (const tok of tokens) {
+    if (/^\d+([.,]\d+)?$/.test(tok)) {
+      if (buffering) { nums.push(buffer); buffering = false; buffer = 0; }
+      nums.push(parseFloat(tok.replace(',', '.')));
+    } else if (tok === 'mil') {
+      buffer = (buffer || 1) * 1000; buffering = true;
+    } else if (NUM_PALAVRAS[tok] !== undefined) {
+      buffer += NUM_PALAVRAS[tok]; buffering = true;
+    } else {
+      if (buffering) { nums.push(buffer); buffering = false; buffer = 0; }
+    }
+  }
+  if (buffering) nums.push(buffer);
+  return nums;
+}
+
+function parseVozEstoque(textoOriginal) {
+  const textoNorm = normalize(textoOriginal);
+  const numeros = extractNumeros(textoNorm);
+  const quantidade = numeros[0] ?? null;
+  const preco = numeros[1] ?? null;
+
+  // nome = palavras antes do primeiro número reconhecido
+  const stop = ['produto','novo','cadastra','regista','registra','adiciona','tem','com','de','a','o','unidades','pecas','peças'];
+  const tokensOrig = textoOriginal.split(/\s+/);
+  let nomeTokens = [];
+  for (const tok of tokensOrig) {
+    const tn = normalize(tok);
+    if (/^\d+([.,]\d+)?$/.test(tn) || tn === 'mil' || NUM_PALAVRAS[tn] !== undefined) break;
+    if (!stop.includes(tn)) nomeTokens.push(tok);
+  }
+  const nome = nomeTokens.join(' ').replace(/,$/, '').trim();
+
+  return { nome, quantidade, preco };
+}
+
+async function abrirVozEstoqueSheet() {
+  if (!window.isSecureContext) {
+    alert('🎤 O microfone só funciona em endereços HTTPS. Se estás a abrir o ficheiro direto no telemóvel (file://), publica primeiro no GitHub Pages — lá funciona.');
+    return;
+  }
+  if (!navigator.onLine) {
+    alert('🎤 O cadastro por voz precisa de internet para funcionar. Você está offline agora — use o botão + normal, que funciona sem rede.');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    alert('Reconhecimento de voz não é suportado neste navegador.');
+    return;
+  }
+  openSheet('🎤 Produto por voz', `
+    <div class="mic-pill online">🟢 online — ativo</div>
+    <p style="font-size:13px; color:#8a92a3; margin:12px 0;">
+      Toque no microfone e diga: nome do produto, quantidade e preço. Ex:<br>
+      <span style="color:#c7cbd4;">"Açúcar, cinquenta, mil e quinhentos"</span>
+    </p>
+    <div style="text-align:center; margin: 18px 0;">
+      <button id="micBtnEstoque" onclick="iniciarReconhecimentoEstoque()" style="width:80px;height:80px;border-radius:50%;background:#818cf8;border:none;font-size:32px;">🎤</button>
+    </div>
+    <div id="vozStatusEstoque" style="text-align:center; font-size:13px; color:#8a92a3; min-height:20px;"></div>
+  `);
+}
+
+async function iniciarReconhecimentoEstoque() {
+  const statusEl = document.getElementById('vozStatusEstoque');
+  const micBtn = document.getElementById('micBtnEstoque');
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop());
+  } catch (permErr) {
+    statusEl.textContent = '🚫 Permissão de microfone negada. Vai nas configurações do navegador e permite o microfone para este site.';
+    return;
+  }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = 'pt-PT';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  micBtn.style.background = '#f87171';
+  statusEl.textContent = 'A ouvir... fale agora';
+
+  rec.onresult = (e) => {
+    const texto = e.results[0][0].transcript;
+    statusEl.textContent = 'Ouvi: "' + texto + '"';
+    const parsed = parseVozEstoque(texto);
+    setTimeout(() => confirmVozEstoqueSheet(parsed), 400);
+  };
+  rec.onerror = (e) => {
+    micBtn.style.background = '#818cf8';
+    const msgs = {
+      'not-allowed': '🚫 Permissão de microfone negada.',
+      'no-speech': 'Não percebi nenhuma fala. Toque e tente de novo, falando logo após tocar.',
+      'network': '📶 Falha de rede — o reconhecimento de voz precisa de internet ativa.',
+      'audio-capture': '🎤 Não encontrei microfone neste aparelho/navegador.'
+    };
+    statusEl.textContent = msgs[e.error] || ('Não consegui ouvir (' + e.error + '). Toque para tentar de novo.');
+  };
+  rec.onend = () => { micBtn.style.background = '#818cf8'; };
+
+  try {
+    rec.start();
+  } catch (err) {
+    statusEl.textContent = 'Erro ao iniciar o microfone: ' + err.message;
+  }
+}
+
+function confirmVozEstoqueSheet(parsed) {
+  const hoje = new Date().toISOString().slice(0,10);
+  openSheet('Confirmar produto', `
+    <p style="font-size:12px; color:#8a92a3; margin-bottom:12px;">Confira e corrija se precisar antes de guardar.</p>
+    <label>Nome do produto</label>
+    <input id="veNome" value="${parsed.nome || ''}" placeholder="Ex: Saco de açúcar 1kg">
+    <label>Quantidade recebida</label>
+    <input id="veQtd" type="number" min="0" value="${parsed.quantidade ?? ''}">
+    <label>Preço unitário (Kz)</label>
+    <input id="vePreco" type="number" min="0" value="${parsed.preco ?? ''}">
+    <label>Data de entrega</label>
+    <input id="veData" type="date" value="${hoje}">
+    <button class="primary" onclick="salvarVozEstoque()">Guardar produto</button>
+    <button class="secondary" onclick="abrirVozEstoqueSheet()">🎤 Tentar de novo</button>
+  `);
+}
+
+async function salvarVozEstoque() {
+  const nome = document.getElementById('veNome').value.trim();
+  const quantidade = parseInt(document.getElementById('veQtd').value || 0);
+  const preco = parseFloat(document.getElementById('vePreco').value || 0);
+  const data_entrega = document.getElementById('veData').value;
+  if (!nome) { alert('Digite o nome do produto'); return; }
+  await add('produtos', { nome, quantidade, preco, data_entrega, quantidade_vendida: 0 });
+  closeOverlay();
+  renderEstoque();
+}
+
+/* ================= Boot ================= */
+openDB().then(() => renderInicio());
+</script>
+</body>
+</html>
