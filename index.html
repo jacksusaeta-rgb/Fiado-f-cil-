@@ -671,14 +671,35 @@ function parseVoz(textoOriginal, clientesNomes) {
   for (const nome of clientesNomes) {
     if (nome && textoNorm.includes(normalize(nome))) { nomeDetectado = nome; break; }
   }
+
+  const stop = ['fiado','de','do','da','dele','dela','no','na','nos','nas','ao','aos','as','os','a','o',
+    'kwanza','kwanzas','kz','pagou','pagamento','pagar','pague','registra','regista','anota','lanca','lança',
+    'um','uma','mil','e','com','para','pra','deve','deveu','ficou','comprou','levou','quanto','quantas','quantos'];
+
   // se não achou, assume que o nome é a(s) primeira(s) palavra(s) antes do número/valor
   if (!nomeDetectado) {
-    const stop = ['fiado','de','dele','dela','kwanza','kwanzas','kz','pagou','pagamento','pagar','registra','regista','anota','lanca','lança','o','a','um','uma','mil','e'];
-    const partes = textoOriginal.split(/[,]|\bde\b/i)[0].split(/\s+/).filter(w => !stop.includes(normalize(w)) && !/\d/.test(w));
+    // isola o trecho antes do primeiro número (em dígito)
+    const mNum = textoOriginal.match(/\d/);
+    let antesDoValor = mNum ? textoOriginal.slice(0, mNum.index) : textoOriginal;
+    // se não há dígito, corta antes do primeiro número por extenso
+    if (!mNum) {
+      const regexExtenso = new RegExp('\\b(' + Object.keys(NUM_PALAVRAS).concat('mil').join('|') + ')\\b', 'i');
+      const mExt = antesDoValor.match(regexExtenso);
+      if (mExt) antesDoValor = antesDoValor.slice(0, mExt.index);
+    }
+    const partes = antesDoValor.split(/\s+/).filter(w => w && !stop.includes(normalize(w)) && !/\d/.test(w));
     nomeDetectado = partes.slice(0,2).join(' ').trim();
   }
 
-  const descricao = textoOriginal.replace(new RegExp(nomeDetectado, 'i'), '').trim();
+  // descrição: remove nome e valor, limpa espaços e pontuação sobrando
+  let descricao = textoOriginal;
+  if (nomeDetectado) {
+    const nomeEscapado = nomeDetectado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    descricao = descricao.replace(new RegExp(nomeEscapado, 'i'), '');
+  }
+  descricao = descricao.replace(/\d[\d.,]*\d|\d/g, '');
+  descricao = descricao.replace(/\bmil\b/gi, '');
+  descricao = descricao.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
 
   return { tipo, valor, nomeDetectado, descricao: descricao.slice(0,60) };
 }
