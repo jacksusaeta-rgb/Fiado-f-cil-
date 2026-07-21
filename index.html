@@ -172,6 +172,8 @@
 
 <div id="overlayRoot"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* ================= IndexedDB ================= */
 let db;
@@ -345,7 +347,129 @@ async function renderInicio() {
     </div>
     <div class="section-title">Últimos registros</div>
     <div class="card" style="padding:6px 14px;">${recentesHTML}</div>
+    <button class="secondary" onclick="gerarRelatorioPDF(event)">📄 Gerar relatório PDF</button>
   `;
+}
+
+/* ================= RELATÓRIO PDF ================= */
+async function gerarRelatorioPDF(evt) {
+  const btn = evt ? evt.target : null;
+  const textoOriginalBtn = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Gerando...'; btn.disabled = true; }
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const clientes = await all('clientes');
+    const produtos = await all('produtos');
+    const trs = await all('transacoes');
+
+    let totalReceber = 0;
+    const saldos = {};
+    for (const c of clientes) {
+      const s = await saldoCliente(c.id);
+      saldos[c.id] = s;
+      if (s > 0) totalReceber += s;
+    }
+    let valorEstoque = 0, totalVendido = 0;
+    produtos.forEach(p => { valorEstoque += (p.quantidade||0) * (p.preco||0); totalVendido += (p.quantidade_vendida||0); });
+
+    const agora = new Date();
+    const dataGeracao = agora.toLocaleDateString('pt-PT', {day:'2-digit', month:'2-digit', year:'numeric'})
+      + ' às ' + agora.toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'});
+
+    // ---- Cabeçalho ----
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.text('Fiado Fácil — Relatório', 14, 18);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(110);
+    doc.text('Gerado em ' + dataGeracao, 14, 25);
+    doc.setTextColor(0);
+
+    // ---- Resumo geral ----
+    doc.autoTable({
+      startY: 32,
+      head: [['Resumo geral', '']],
+      body: [
+        ['Total a receber', kz(totalReceber)],
+        ['Valor em estoque', kz(valorEstoque)],
+        ['Clientes cadastrados', String(clientes.length)],
+        ['Produtos vendidos', String(totalVendido)],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 34, 44] },
+      styles: { fontSize: 10 },
+    });
+
+    // ---- Clientes com saldo devedor ----
+    const devedores = clientes
+      .filter(c => (saldos[c.id]||0) > 0)
+      .sort((a,b) => saldos[b.id] - saldos[a.id]);
+
+    let yDevedores = doc.lastAutoTable.finalY + 14;
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0);
+    doc.text('Clientes com saldo devedor', 14, yDevedores);
+
+    doc.autoTable({
+      startY: yDevedores + 4,
+      head: [['Cliente', 'Telefone', 'Saldo devedor']],
+      body: devedores.length
+        ? devedores.map(c => [c.nome, c.telefone || '—', kz(saldos[c.id])])
+        : [['Nenhum cliente com saldo em aberto', '', '']],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 34, 44] },
+      styles: { fontSize: 10 },
+    });
+
+    // ---- Histórico completo de lançamentos ----
+    const historico = [...trs].sort((a,b) => new Date(a.data) - new Date(b.data));
+    const clientesPorId = {};
+    clientes.forEach(c => clientesPorId[c.id] = c.nome);
+
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('Histórico completo de lançamentos', 14, 18);
+
+    doc.autoTable({
+      startY: 24,
+      head: [['Data', 'Cliente', 'Tipo', 'Valor', 'Descrição']],
+      body: historico.length
+        ? historico.map(t => [
+            fmtDate(t.data),
+            clientesPorId[t.cliente_id] || '—',
+            t.tipo === 'divida' ? 'Dívida' : 'Pagamento',
+            kz(t.valor),
+            t.descricao || '—'
+          ])
+        : [['—', 'Nenhum lançamento registrado', '', '', '']],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 34, 44] },
+      styles: { fontSize: 9 },
+      columnStyles: { 4: { cellWidth: 60 } },
+    });
+
+    // ---- Rodapé com numeração ----
+    const totalPaginas = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPaginas; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text('Fiado Fácil · Página ' + i + ' de ' + totalPaginas, 14, doc.internal.pageSize.height - 8);
+    }
+
+    const nomeArquivo = 'relatorio-fiado-facil-' + agora.toISOString().slice(0,10) + '.pdf';
+    doc.save(nomeArquivo);
+  } catch (err) {
+    alert('Não consegui gerar o PDF: ' + err.message);
+  } finally {
+    if (btn) { btn.textContent = textoOriginalBtn; btn.disabled = false; }
+  }
 }
 
 /* ================= FIADO (clientes) ================= */
@@ -780,7 +904,7 @@ async function iniciarReconhecimento() {
 }
 
 function confirmVozSheet(parsed, clientes) {
-  const opts = clientes.map(c => `<option value="${c.nome}" data-id="${c.id}">${c.nome}</option>`).join('');
+  const opts = clientes.map(c => `<option value="${c.nome}" data-id="${c.id}">${c.nome}${c.telefone ? ' — ' + c.telefone : ''}</option>`).join('');
   openSheet('Confirmar lançamento', `
     <p style="font-size:12px; color:#8a92a3; margin-bottom:12px;">Confira e corrija se precisar antes de guardar.</p>
 
@@ -827,23 +951,69 @@ async function salvarVoz() {
   if (!nome) { alert('Digite ou confirme o nome do cliente'); return; }
   if (!valor || valor <= 0) { alert('Digite um valor válido'); return; }
 
-  // acha cliente existente (por nome) ou cria um novo
+  const dados = { tipo, valor, desc };
+
+  // acha cliente(s) existente(s) por nome
   const clientes = await all('clientes');
-  let cliente = clientes.find(c => normalize(c.nome) === normalize(nome));
+  const candidatos = clientes.filter(c => normalize(c.nome) === normalize(nome));
+
+  if (candidatos.length > 1) {
+    // mais de um cliente com o mesmo nome: pede pra escolher em vez de adivinhar
+    escolherClienteVoz(candidatos, dados, { nomeDetectado: nome, tipo, valor, descricao: desc }, clientes);
+    return;
+  }
+
   let clienteId;
-  if (cliente) {
-    clienteId = cliente.id;
+  if (candidatos.length === 1) {
+    clienteId = candidatos[0].id;
   } else {
     clienteId = await add('clientes', { nome, telefone:'', criado_em: nowISO() });
   }
 
+  await finalizarLancamentoVoz(clienteId, dados);
+}
+
+function escolherClienteVoz(candidatos, dados, parsedParaVoltar, clientesParaVoltar) {
+  window._dadosVozPendente = dados;
+  window._vozVoltarParsed = parsedParaVoltar;
+  window._vozVoltarClientes = clientesParaVoltar;
+  const itens = candidatos.map(c => `
+    <div class="list-item" onclick="confirmarClienteVoz(${c.id})">
+      <div class="avatar">${initials(c.nome)}</div>
+      <div class="li-main">
+        <div class="li-name">${c.nome}</div>
+        <div class="li-sub">${c.telefone || 'sem telefone cadastrado'}</div>
+      </div>
+    </div>`).join('');
+  openSheet('Há mais de um cliente com esse nome', `
+    <p style="font-size:12px; color:#8a92a3; margin-bottom:12px;">Toque no cliente certo para este lançamento.</p>
+    ${itens}
+    <button class="secondary" onclick="voltarConfirmVoz()" style="margin-top:12px;">Voltar</button>
+  `);
+}
+
+function voltarConfirmVoz() {
+  const parsed = window._vozVoltarParsed;
+  const clientes = window._vozVoltarClientes;
+  window._dadosVozPendente = null;
+  if (parsed && clientes) confirmVozSheet(parsed, clientes);
+  else closeOverlay();
+}
+
+async function confirmarClienteVoz(clienteId) {
+  const dados = window._dadosVozPendente;
+  window._dadosVozPendente = null;
+  if (!dados) { closeOverlay(); renderFiado(); return; }
+  await finalizarLancamentoVoz(clienteId, dados);
+}
+
+async function finalizarLancamentoVoz(clienteId, { tipo, valor, desc }) {
   await add('transacoes', {
     cliente_id: clienteId, tipo, valor, descricao: desc,
     produto_id: null, quantidade: null,
     pago: tipo === 'pagamento' ? true : false,
     data: nowISO()
   });
-
   closeOverlay();
   renderFiado();
 }
